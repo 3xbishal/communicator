@@ -227,6 +227,7 @@ PRESENCE_WINDOW_SECONDS = int(os.environ.get("PRESENCE_WINDOW_SECONDS", 45))
 
 
 LOGIN_URL = "identity:home"
+LOGOUT_REDIRECT_URL = "identity:home"  # where the admin panel's "Log out" (Django auth, not a member's) lands
 
 # Django's "error" message level doesn't match any Bootstrap alert class —
 # map it to "danger" so templates can use alert-{{ message.tags }} directly

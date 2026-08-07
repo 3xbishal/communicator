@@ -27,6 +27,7 @@
 <body>
 <header class="app-topbar sticky-top">
   <div class="container-fluid px-3 px-lg-4 py-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    {% block topbar %}
     <div class="d-flex align-items-center gap-3">
       <span class="traffic-lights" aria-hidden="true"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></span>
       {% if request.member and request.member.is_approved %}
@@ -41,7 +42,7 @@
     <div class="topbar-nav">
       {% if request.user.is_staff %}
       <a href="{% url 'identity:staff_approvals' %}" class="btn btn-sm btn-outline-secondary">
-        <i class="fa-solid fa-shield-halved"></i> <span class="d-none d-sm-inline">Approvals</span>
+        <i class="fa-solid fa-user-shield"></i> <span class="d-none d-sm-inline">Admin panel</span>
       </a>
       {% endif %}
       {% if request.member %}
@@ -65,6 +66,7 @@
         <i class="fa-solid fa-moon" id="theme-icon"></i>
       </button>
     </div>
+    {% endblock %}
   </div>
 </header>
 

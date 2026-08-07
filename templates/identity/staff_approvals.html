@@ -1,11 +1,36 @@
 {% extends "base.html" %}
 {% load chat_extras %}
-{% block title %}Approvals — Communicator{% endblock %}
+{% block title %}Admin Panel — Communicator{% endblock %}
+
+{% block topbar %}
+{# This whole panel is staff_member_required at the view level (see #}
+{# identity.views.staff_approvals) — this topbar is just its visual #}
+{# identity, deliberately distinct from the regular chat app's nav so #}
+{# it never gets mistaken for something an ordinary member can reach. #}
+<div class="d-flex align-items-center gap-3">
+  <span class="traffic-lights" aria-hidden="true"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></span>
+  <span class="navbar-brand"><span class="prompt-symbol">~/</span>admin<span class="cursor-blink">&#9608;</span></span>
+</div>
+<div class="topbar-nav">
+  <a href="{% url 'chat:room' %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline">View app</span></a>
+  <button id="theme-toggle" type="button" class="btn btn-sm btn-outline-secondary btn-icon" title="Switch between light and dark mode" aria-label="Switch between light and dark mode">
+    <i class="fa-solid fa-moon" id="theme-icon"></i>
+  </button>
+  <form method="post" action="{% url 'admin:logout' %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-right-from-bracket"></i> <span class="d-none d-sm-inline">Log out</span></button>
+  </form>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4" style="max-width: 900px;">
   <div class="d-flex align-items-center gap-3 mb-4">
-    <span class="icon-badge"><i class="fa-solid fa-shield-halved fa-lg"></i></span>
-    <h1 class="h3 fw-bold mb-0">Approvals</h1>
+    <span class="icon-badge"><i class="fa-solid fa-user-shield fa-lg"></i></span>
+    <div>
+      <h1 class="h3 fw-bold mb-0">Admin Panel</h1>
+      <p class="small comment-text mb-0">Approve or reject membership requests — the main job this panel exists for.</p>
+    </div>
   </div>
 
   <div class="row g-3 mb-4">
