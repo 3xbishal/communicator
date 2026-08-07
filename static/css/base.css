@@ -60,6 +60,14 @@
   --chrome-dim: #8b949e;
 
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Reserved for actual prose people read (message text, hints, taglines)
+     — the UI chrome (nav, buttons, labels, headings) stays monospace for
+     the developer-tool identity, but long monospace paragraphs are
+     measurably slower to read than proportional text. GitHub, Linear, and
+     even VS Code's own UI all make this same split (monospace for code/
+     chrome, proportional for content), so this isn't a compromise of the
+     "coding style" brief, it's how real developer tools actually do it. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --shadow-soft: 0 1px 2px rgba(31, 35, 40, 0.06);
   --shadow-soft-lg: 0 4px 12px rgba(31, 35, 40, 0.1);
@@ -98,15 +106,21 @@
   --shadow-soft-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
-* { font-family: var(--font-mono); }
-
 html, body { height: 100%; }
 body {
   display: flex;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+/* Prose people actually read at length gets the readable font — see the
+   --font-sans comment above for why this split exists. */
+.bubble-text, .comment-text, p {
+  font-family: var(--font-sans);
 }
 /* Only the chat pages (room/day) have their own internal scroll region
    (.message-list); everywhere else — the approvals dashboard's list,
@@ -120,7 +134,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 
 /* --- Comment-style secondary text: `// like this`, a cheap but *
  * authentic developer-tool touch used for hints/taglines/empty states. */
-.comment-text { color: var(--bs-secondary-color); }
+.comment-text { color: var(--bs-secondary-color); line-height: 1.6; }
 .comment-text::before { content: "// "; opacity: 0.7; }
 
 /* --- Top bar: fixed terminal-window chrome, independent of the page's *
@@ -181,8 +195,8 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 /* --- Bracket-decorated buttons: [ Approve ] — a CLI-menu touch, scoped *
  * away from icon-only circular/square controls (mic, send, attach,
  * theme toggle) so it only wraps genuine labeled actions. --- */
-.btn:not(.btn-icon)::before { content: "["; margin-right: 0.4em; opacity: 0.55; }
-.btn:not(.btn-icon)::after { content: "]"; margin-left: 0.4em; opacity: 0.55; }
+.btn:not(.btn-icon)::before { content: "["; margin-right: 0.35em; opacity: 0.4; }
+.btn:not(.btn-icon)::after { content: "]"; margin-left: 0.35em; opacity: 0.4; }
 
 /* --- Cards: sharp bordered panels, like an editor pane --- */
 .card { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); box-shadow: none; }

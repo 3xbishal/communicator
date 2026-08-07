@@ -52,7 +52,7 @@
           <div class="d-flex align-items-center gap-2 ms-auto">
             <form method="post" action="{% url 'identity:staff_remove_member' member_id=member.pk %}" onsubmit="return confirm('Free up the username {{ member.username }}? This removes the request entirely — not just a rejection.');">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove entirely"><i class="fa-solid fa-trash"></i></button>
+              <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove entirely" aria-label="Remove {{ member.username }}'s request entirely"><i class="fa-solid fa-trash"></i></button>
             </form>
             <form method="post" action="{% url 'identity:staff_reject' member_id=member.pk %}">
               {% csrf_token %}
@@ -90,7 +90,7 @@
         </span>
         <form method="post" action="{% url 'identity:staff_remove_member' member_id=member.pk %}" onsubmit="return confirm('Free up the username {{ member.username }}?');">
           {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove and free the username"><i class="fa-solid fa-trash"></i></button>
+          <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove and free the username" aria-label="Remove {{ member.username }} and free the username"><i class="fa-solid fa-trash"></i></button>
         </form>
       </div>
       {% endfor %}
