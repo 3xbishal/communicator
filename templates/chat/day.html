@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load chat_extras %}
+{% block title %}{{ day|date:"M j, Y" }} — Communicator{% endblock %}
+{% block content %}
+<div class="room-shell">
+  {% include "chat/_sidebar_offcanvas.html" %}
+
+  <div class="room-main">
+    <div class="d-flex align-items-center justify-content-between gap-3 border-bottom p-3 bg-body">
+      <div class="d-flex align-items-center gap-2 text-body-secondary">
+        <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <i class="fa-solid fa-clock"></i>
+        <span>Archive &middot; <strong class="text-body">{{ day|date:"F j, Y" }}</strong></span>
+      </div>
+      <a href="{% url 'chat:room' %}" class="btn btn-brand btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Back to live chat</a>
+    </div>
+    <div class="message-list">
+      {% for message in day_messages %}
+      <div class="bubble {% if message.sender_id == request.member.id %}mine{% else %}theirs bg-body-tertiary{% endif %}">
+        {% if message.sender_id != request.member.id %}
+        <span class="bubble-sender">
+          <span class="avatar avatar-inline" style="background:{{ message.sender_username|avatar_color }}">{{ message.sender_username|initial }}</span>
+          {{ message.sender_username }}
+        </span>
+        {% endif %}
+        {% if message.kind == 'text' %}
+        <p class="bubble-text">{{ message.text }}</p>
+        {% elif message.kind == 'voice' %}
+        <audio controls src="{% url 'chat:download' message_id=message.pk %}"></audio>
+        {% elif message.kind == 'file' %}
+        <a href="{% url 'chat:download' message_id=message.pk %}" target="_blank" rel="noopener">{{ message.original_filename }}</a>
+        {% if message.text %}<p class="bubble-text">{{ message.text }}</p>{% endif %}
+        {% endif %}
+        <span class="bubble-time">{{ message.created_at|date:"H:i" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

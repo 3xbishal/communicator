@@ -1,0 +1,28 @@
+{% load chat_extras %}
+<h6 class="text-uppercase text-body-secondary small fw-bold mb-3"><i class="fa-solid fa-users me-1"></i>Members</h6>
+<ul class="list-unstyled d-flex flex-column gap-2 mb-4" id="members-list">
+  {% for member in members %}
+  <li class="member-row {% if member.mine %}mine{% endif %}">
+    <span class="avatar" style="background:{{ member.color }}">{{ member.username|initial }}</span>
+    <span class="member-name">{{ member.username }}{% if member.mine %} (you){% endif %}</span>
+    <span class="presence-dot {% if member.online %}online{% endif %}"></span>
+  </li>
+  {% endfor %}
+</ul>
+
+<h6 class="text-uppercase text-body-secondary small fw-bold mb-3"><i class="fa-solid fa-clock me-1"></i>History</h6>
+{% if history %}
+<ul class="list-unstyled d-flex flex-column gap-1">
+  {% for day in history %}
+  <li>
+    <a href="{% url 'chat:day' date_str=day.date|date:'Y-m-d' %}" class="history-row d-block text-decoration-none rounded p-2{% if day.date == active_date %} active{% else %} text-body{% endif %}">
+      <div class="small fw-bold">{{ day.date|date:"M j, Y" }}</div>
+      <div class="small text-body-secondary history-preview">{{ day.preview }}</div>
+      <div class="small text-body-secondary">{{ day.count }} message{{ day.count|pluralize }}</div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="small comment-text">Nothing archived yet — today's chat shows up here once a new day starts.</p>
+{% endif %}

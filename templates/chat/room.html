@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static chat_extras %}
+{% block title %}Room — Communicator{% endblock %}
+{% block content %}
+<div class="room-shell" data-last-id="{{ last_id }}">
+  {% include "chat/_sidebar_offcanvas.html" %}
+
+  <div class="room-main">
+    <div class="d-lg-none border-bottom p-2 bg-body">
+      <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+        <i class="fa-solid fa-bars me-1"></i>Members &amp; history
+      </button>
+    </div>
+
+    <div id="message-list" class="message-list"></div>
+
+    {{ messages_json|json_script:"initial-messages" }}
+
+    <form id="composer" class="composer-bar d-flex align-items-center gap-2 p-3">
+      {% csrf_token %}
+      <label class="btn btn-light btn-icon border" title="Attach file">
+        <i class="fa-solid fa-paperclip"></i>
+        <input type="file" id="file-input" name="attachment" hidden>
+      </label>
+      <input type="text" id="text-input" name="text" class="form-control" placeholder="Type a message..." autocomplete="off">
+      <button type="button" id="mic-btn" class="btn btn-mic btn-light btn-icon border" title="Record a voice note"><i class="fa-solid fa-microphone"></i></button>
+      <button type="submit" class="btn btn-brand btn-icon" title="Send"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/recorder.js' %}"></script>
+<script src="{% static 'js/poll-room.js' %}"></script>
+{% endblock %}

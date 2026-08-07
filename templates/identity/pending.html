@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Waiting for approval — Communicator{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="card landing-card shadow-sm">
+    <div class="card-body p-4 p-md-5 text-center">
+      <div class="icon-badge is-warning mx-auto mb-3"><i class="fa-solid fa-clock fa-lg"></i></div>
+      <h1 class="h3 fw-bold mb-2">You're on the list</h1>
+      <p class="comment-text mb-0">Your username <strong>{{ request.member.username }}</strong> is waiting for an admin to approve it. This page will jump to the chat automatically once that happens — no need to keep refreshing.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/status-poll.js' %}"></script>
+{% endblock %}

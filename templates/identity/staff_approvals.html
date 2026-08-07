@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load chat_extras %}
+{% block title %}Approvals — Communicator{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <span class="icon-badge"><i class="fa-solid fa-shield-halved fa-lg"></i></span>
+    <h1 class="h3 fw-bold mb-0">Approvals</h1>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="stat-value">{{ pending|length }}</div>
+          <div class="small text-uppercase text-body-secondary fw-semibold">Pending</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="stat-value">{{ approved_count }}</div>
+          <div class="small text-uppercase text-body-secondary fw-semibold">Approved</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="stat-value">{{ total_count }}</div>
+          <div class="small text-uppercase text-body-secondary fw-semibold">Total members</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="mb-5">
+    <h2 class="h6 text-uppercase text-body-secondary fw-bold mb-3 d-flex align-items-center gap-2">
+      Pending <span class="badge rounded-pill btn-brand">{{ pending|length }}</span>
+    </h2>
+    {% if pending %}
+    <div class="d-flex flex-column gap-2">
+      {% for member in pending %}
+      <div class="card approval-card shadow-sm">
+        <div class="card-body d-flex flex-wrap align-items-center gap-3">
+          <span class="avatar" style="background:{{ member.username|avatar_color }}">{{ member.username|initial }}</span>
+          <div class="flex-grow-1">
+            <div class="fw-bold">{{ member.username }}</div>
+            <div class="small text-body-secondary">Requested {{ member.created_at|timesince }} ago</div>
+          </div>
+          <div class="d-flex align-items-center gap-2 ms-auto">
+            <form method="post" action="{% url 'identity:staff_remove_member' member_id=member.pk %}" onsubmit="return confirm('Free up the username {{ member.username }}? This removes the request entirely — not just a rejection.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove entirely"><i class="fa-solid fa-trash"></i></button>
+            </form>
+            <form method="post" action="{% url 'identity:staff_reject' member_id=member.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-xmark me-1"></i>Reject</button>
+            </form>
+            <form method="post" action="{% url 'identity:staff_approve' member_id=member.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-success"><i class="fa-solid fa-check me-1"></i>Approve</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-body-secondary py-5">
+      <i class="fa-solid fa-shield-halved fa-2x mb-2 opacity-50 d-block"></i>
+      <span class="comment-text">No one's waiting — you're all caught up.</span>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if recent_decisions %}
+  <section>
+    <h2 class="h6 text-uppercase text-body-secondary fw-bold mb-2">Recent decisions</h2>
+    <p class="small comment-text mb-3">Stuck on a username someone can't get back into (lost session, different browser)? Remove it here to free it up — their chat history stays exactly where it is.</p>
+    <div class="list-group">
+      {% for member in recent_decisions %}
+      <div class="list-group-item d-flex align-items-center gap-3">
+        <span class="avatar avatar-inline" style="background:{{ member.username|avatar_color }}">{{ member.username|initial }}</span>
+        <span class="flex-grow-1 fw-semibold">{{ member.username }}</span>
+        <span class="badge rounded-pill status-pill status-{{ member.status }}">
+          {% if member.status == "approved" %}<i class="fa-solid fa-check me-1"></i>{% else %}<i class="fa-solid fa-xmark me-1"></i>{% endif %}
+          {{ member.get_status_display }}
+        </span>
+        <form method="post" action="{% url 'identity:staff_remove_member' member_id=member.pk %}" onsubmit="return confirm('Free up the username {{ member.username }}?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove and free the username"><i class="fa-solid fa-trash"></i></button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
