@@ -8,7 +8,12 @@
   var $composer = $('#composer');
   var $textInput = $('#text-input');
   var $fileInput = $('#file-input');
+  var $fileLabel = $fileInput.closest('label');
   var $micBtn = $('#mic-btn');
+  var $uploadStatus = $('#upload-status');
+  var $uploadFilename = $('#upload-filename');
+  var $uploadPercent = $('#upload-percent');
+  var $uploadProgressBar = $('#upload-progress-bar');
 
   var initialMessages = [];
   var $initialData = $('#initial-messages');
@@ -121,8 +126,40 @@
     }
   });
 
+  // --- Upload progress ---
+  var uploading = false;
+
+  function setUploadingControlsDisabled(disabled) {
+    uploading = disabled;
+    $fileInput.prop('disabled', disabled);
+    $fileLabel.toggleClass('disabled', disabled).attr('aria-disabled', disabled ? 'true' : null);
+    $micBtn.prop('disabled', disabled);
+  }
+
+  function showUploadProgress(filename) {
+    $uploadFilename.text('Uploading ' + filename + '...');
+    $uploadPercent.text('0%');
+    $uploadProgressBar.css('width', '0%').attr('aria-valuenow', 0);
+    $uploadStatus.removeClass('d-none');
+  }
+
+  function updateUploadProgress(percent) {
+    $uploadPercent.text(percent + '%');
+    $uploadProgressBar.css('width', percent + '%').attr('aria-valuenow', percent);
+  }
+
+  function hideUploadProgress() {
+    $uploadStatus.addClass('d-none');
+  }
+
   // --- Composer ---
-  function sendPayload(formData) {
+  function sendPayload(formData, progressLabel) {
+    var showsProgress = !!progressLabel;
+    if (showsProgress) {
+      setUploadingControlsDisabled(true);
+      showUploadProgress(progressLabel);
+    }
+
     return $.ajax({
       url: '/chat/send/',
       method: 'POST',
@@ -135,10 +172,29 @@
       // doesn't silently depend on load order or a stale cached csrf.js
       // from before it existed.
       headers: { 'X-CSRFToken': getCookie('csrftoken') },
-    }).done(function (msg) {
-      lastId = Math.max(lastId, msg.id);
-      appendMessage(msg);
-    });
+      xhr: function () {
+        var xhr = $.ajaxSettings.xhr();
+        if (showsProgress && xhr.upload) {
+          xhr.upload.addEventListener('progress', function (e) {
+            if (e.lengthComputable) {
+              updateUploadProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          });
+        }
+        return xhr;
+      },
+    })
+      .done(function (msg) {
+        lastId = Math.max(lastId, msg.id);
+        appendMessage(msg);
+      })
+      .always(function () {
+        if (showsProgress) {
+          updateUploadProgress(100);
+          setTimeout(hideUploadProgress, 300);
+          setUploadingControlsDisabled(false);
+        }
+      });
   }
 
   $composer.on('submit', function (e) {
@@ -155,11 +211,12 @@
   });
 
   $fileInput.on('change', function () {
-    if (!this.files.length) return;
+    if (uploading || !this.files.length) return;
+    var file = this.files[0];
     var formData = new FormData();
-    formData.append('attachment', this.files[0]);
+    formData.append('attachment', file);
     formData.append('kind', 'file');
-    sendPayload(formData)
+    sendPayload(formData, file.name)
       .fail(function () {
         alert('File failed to send.');
       })
@@ -170,6 +227,7 @@
 
   var recording = false;
   $micBtn.on('click', function () {
+    if (uploading) return;
     if (!window.CommunicatorRecorder.isSupported()) {
       alert('Voice notes need microphone support, which this browser does not provide.');
       return;
@@ -183,7 +241,7 @@
         var formData = new FormData();
         formData.append('attachment', blob, 'voice-note.webm');
         formData.append('kind', 'voice');
-        sendPayload(formData).fail(function () {
+        sendPayload(formData, 'voice note').fail(function () {
           alert('Voice note failed to send.');
         });
       });

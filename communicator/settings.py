@@ -141,7 +141,13 @@ AUTH_PASSWORD_VALIDATORS = [
 # --- I18N -------------------------------------------------------------
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = os.environ.get("TIME_ZONE", "UTC")
+# This drives more than display: chat.views.daily_summaries()/room()/
+# messages_poll() use timezone.localdate() to decide where "today" starts
+# and ends for the live room vs. the day archive — so this must match
+# where the group actually is, not the server's location. Getting it
+# wrong doesn't just mislabel timestamps, it puts messages in the wrong
+# day's bucket for a few hours around midnight (UTC's, not the group's).
+TIME_ZONE = os.environ.get("TIME_ZONE", "Asia/Dhaka")
 USE_I18N = True
 USE_TZ = True
 
