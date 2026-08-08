@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from identity.models import Member
 
@@ -35,10 +36,28 @@ class Message(models.Model):
     content_type = models.CharField(max_length=100, blank=True)
     size = models.PositiveIntegerField(default=0)
 
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+    # Denormalized copy of created_at's date in the app's local timezone,
+    # set in save() below. The live room / history archive both filter and
+    # group on this instead of on created_at directly, because a plain
+    # DateField needs no timezone conversion to query — created_at__date
+    # or TruncDate("created_at") would ask the database to convert UTC to
+    # TIME_ZONE itself, and on MySQL that means CONVERT_TZ(), which
+    # silently returns NULL (matching nothing, ever) unless the server's
+    # named-timezone tables are loaded — something shared hosts (cPanel
+    # included) essentially never have, since it requires root access to
+    # the MySQL install. Storing the already-localized date sidesteps that
+    # dependency entirely, on every backend.
+    local_date = models.DateField(db_index=True, editable=False)
 
     class Meta:
         ordering = ["id"]
 
     def __str__(self):
         return f"[{self.kind}] {self.sender_id}#{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if self.created_at is None:
+            self.created_at = timezone.now()
+        self.local_date = timezone.localtime(self.created_at).date()
+        super().save(*args, **kwargs)

@@ -4,7 +4,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.db.models import Count, Max
-from django.db.models.functions import TruncDate
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -73,14 +72,19 @@ def daily_summaries(limit=HISTORY_DAY_LIMIT):
     a message count and a preview of the last message — one aggregate
     query plus one small follow-up fetch for the previews, not N+1.
     Today is deliberately excluded: that's what the live room already is.
+
+    Grouped by the stored local_date column (see Message.save()), not by
+    TruncDate("created_at") — the latter asks the database to convert UTC
+    to TIME_ZONE itself, which on MySQL requires CONVERT_TZ() and silently
+    matches nothing if the server's named-timezone tables aren't loaded (the
+    default on most shared hosting, cPanel included).
     """
     today = timezone.localdate()
     rows = list(
-        Message.objects.annotate(day=TruncDate("created_at"))
-        .exclude(day=today)
-        .values("day")
+        Message.objects.exclude(local_date=today)
+        .values("local_date")
         .annotate(count=Count("id"), last_id=Max("id"))
-        .order_by("-day")[:limit]
+        .order_by("-local_date")[:limit]
     )
     previews = {
         m.pk: m
@@ -88,7 +92,7 @@ def daily_summaries(limit=HISTORY_DAY_LIMIT):
     }
     return [
         {
-            "date": row["day"],
+            "date": row["local_date"],
             "count": row["count"],
             "preview": _preview_text(previews.get(row["last_id"])),
         }
@@ -102,8 +106,9 @@ def room(request):
     # Live room is scoped to today only — anything older lives exclusively
     # in the day archive (see daily_summaries()/day_view below), so this
     # view never mixes yesterday's tail-end messages into a fresh load.
+    # Filtered on local_date, not created_at__date — see Message.save().
     recent = list(
-        Message.objects.filter(created_at__date=timezone.localdate()).order_by("-id")[:MESSAGE_PAGE_SIZE]
+        Message.objects.filter(local_date=timezone.localdate()).order_by("-id")[:MESSAGE_PAGE_SIZE]
     )
     recent.reverse()
 
@@ -132,7 +137,7 @@ def day_view(request, date_str):
         return redirect("chat:room")
 
     messages = list(
-        Message.objects.filter(created_at__date=day).order_by("id")
+        Message.objects.filter(local_date=day).order_by("id")
     )
     if not messages:
         raise Http404
@@ -165,7 +170,7 @@ def messages_poll(request):
     # recomputed fresh on every request.
     today = timezone.localdate()
     new_messages = list(
-        Message.objects.filter(id__gt=after, created_at__date=today)
+        Message.objects.filter(id__gt=after, local_date=today)
         .order_by("id")[:POLL_PAGE_SIZE]
     )
 

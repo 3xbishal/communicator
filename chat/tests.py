@@ -251,12 +251,13 @@ class DownloadViewTests(TestCase):
 
 def backdate(message, days_ago):
     target = timezone.now() - timedelta(days=days_ago)
-    Message.objects.filter(pk=message.pk).update(created_at=target)
-    # .date() on a UTC-based datetime gives the UTC calendar date, but the
-    # app buckets messages by settings.TIME_ZONE (see chat/views.py) via
-    # Django's __date lookup, which converts to local time first — these
-    # only diverge when TIME_ZONE isn't UTC, which is exactly the case now.
-    return timezone.localtime(target).date()
+    local_day = timezone.localtime(target).date()
+    # local_date has to move in lockstep with created_at here — the app
+    # queries local_date directly (see chat/views.py), not created_at, so
+    # a raw .update() that only touched created_at would leave the message
+    # filed under its original (pre-backdate) day.
+    Message.objects.filter(pk=message.pk).update(created_at=target, local_date=local_day)
+    return local_day
 
 
 class DailySummariesTests(TestCase):
