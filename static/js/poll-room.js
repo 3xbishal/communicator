@@ -3,6 +3,7 @@
   if (!$shell.length) return;
 
   var lastId = parseInt($shell.data('last-id') || 0, 10);
+  var currentDay = String($shell.data('today') || '');
   var $messageList = $('#message-list');
   var $membersList = $('#members-list');
   var $composer = $('#composer');
@@ -101,6 +102,14 @@
     }
     $.get('/chat/messages/', { after: lastId })
       .done(function (data) {
+        // The server recomputes "today" on every poll. If it no longer
+        // matches the day this page loaded with, midnight has passed
+        // while the tab sat open — reload into a fresh live chat instead
+        // of silently appending today's messages under yesterday's.
+        if (currentDay && data.today && data.today !== currentDay) {
+          window.location.reload();
+          return;
+        }
         currentInterval = POLL_INTERVAL_MS;
         data.messages.forEach(function (msg) {
           lastId = Math.max(lastId, msg.id);

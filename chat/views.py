@@ -116,6 +116,7 @@ def room(request):
             "members": online_members(me),
             "history": daily_summaries(),
             "active_date": None,
+            "today": timezone.localdate().isoformat(),
         },
     )
 
@@ -162,8 +163,9 @@ def messages_poll(request):
     # left open overnight), yesterday's tail simply stops being fetched;
     # today's new messages still come through normally since "today" is
     # recomputed fresh on every request.
+    today = timezone.localdate()
     new_messages = list(
-        Message.objects.filter(id__gt=after, created_at__date=timezone.localdate())
+        Message.objects.filter(id__gt=after, created_at__date=today)
         .order_by("id")[:POLL_PAGE_SIZE]
     )
 
@@ -171,6 +173,12 @@ def messages_poll(request):
         {
             "messages": [serialize_message(m, me) for m in new_messages],
             "members": online_members(me),
+            # Lets a page left open across midnight notice the day rolled
+            # over (poll-room.js compares this against the date it loaded
+            # with) and reload into a clean new live chat, instead of
+            # silently appending today's messages under yesterday's still
+            # on screen.
+            "today": today.isoformat(),
         }
     )
 

@@ -73,6 +73,15 @@ class RoomViewTests(TestCase):
         ids = [m["id"] for m in response.context["messages_json"]]
         self.assertEqual(ids, [today_message.pk])
 
+    def test_room_context_includes_todays_date(self):
+        # The template stamps this onto .room-shell's data-today attribute
+        # so poll-room.js can detect a midnight rollover client-side.
+        member = make_member("alice")
+        client = Client()
+        login_member(client, member)
+        response = client.get(reverse("chat:room"))
+        self.assertEqual(response.context["today"], timezone.localdate().isoformat())
+
 
 class MessagesPollViewTests(TestCase):
     def setUp(self):
@@ -122,6 +131,14 @@ class MessagesPollViewTests(TestCase):
         response = self.client.get(reverse("chat:messages_poll"), {"after": 0})
         data = json.loads(response.content)
         self.assertEqual(data["messages"], [])
+
+    def test_poll_reports_todays_date_for_rollover_detection(self):
+        # poll-room.js compares this against the date the page loaded with
+        # and reloads on mismatch, so a tab left open across midnight
+        # cleanly opens a fresh live chat instead of silently appending.
+        response = self.client.get(reverse("chat:messages_poll"), {"after": 0})
+        data = json.loads(response.content)
+        self.assertEqual(data["today"], timezone.localdate().isoformat())
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)

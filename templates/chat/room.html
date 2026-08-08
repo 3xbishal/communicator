@@ -2,7 +2,7 @@
 {% load static chat_extras %}
 {% block title %}Room — Communicator{% endblock %}
 {% block content %}
-<div class="room-shell" data-last-id="{{ last_id }}">
+<div class="room-shell" data-last-id="{{ last_id }}" data-today="{{ today }}">
   {% include "chat/_sidebar_offcanvas.html" %}
 
   <div class="room-main">
