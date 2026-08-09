@@ -183,11 +183,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Uploads --------------------------------------------------------------
 
-# Shared hosts commonly cap request body size around 8-32MB at the Apache
-# layer independent of these Django settings — check your cPanel plan and
-# keep this at or below it.
-MAX_ATTACHMENT_BYTES = int(os.environ.get("MAX_ATTACHMENT_BYTES", 15 * 1024 * 1024))
-DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_ATTACHMENT_BYTES
+# No app-level size cap: DATA_UPLOAD_MAX_MEMORY_SIZE = None turns off
+# Django's own request-body limit entirely. This does NOT override caps
+# set by the hosting environment itself — shared hosts commonly enforce
+# their own request body limit around 8-32MB at the Apache layer,
+# independent of anything here, so very large uploads may still be
+# rejected before Django ever sees them; check your cPanel plan if so.
+DATA_UPLOAD_MAX_MEMORY_SIZE = None
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # spill to disk above this instead of buffering in RAM
 
 # Extensions that must never be accepted, even renamed on disk with a

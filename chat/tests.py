@@ -195,13 +195,6 @@ class SendMessageViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Message.objects.count(), 0)
 
-    @override_settings(MAX_ATTACHMENT_BYTES=5)
-    def test_oversized_file_rejected(self):
-        upload = SimpleUploadedFile("big.txt", b"way-too-big", content_type="text/plain")
-        response = self.client.post(self._send_url(), {"attachment": upload})
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(Message.objects.count(), 0)
-
     def test_send_is_rate_limited(self):
         for _ in range(60):
             self.client.post(self._send_url(), {"text": "spam"})

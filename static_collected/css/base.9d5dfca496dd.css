@@ -1,0 +1,231 @@
+/*
+ * Bootstrap 5 + Font Awesome handle layout, components, and theming — this
+ * file only covers what they don't: recoloring Bootstrap's own tokens to a
+ * plain white/black (light) and true-black/soft-gray (dark) palette with a
+ * single flat accent color (no gradients), the chat-specific bits (bubbles,
+ * avatars, presence dots), soft "mobile app" shadows/radii, and the
+ * flex/height chain that makes the message list scroll on its own instead
+ * of the whole page scrolling.
+ *
+ * Two different override mechanisms are needed, not one: Bootstrap 5.3's
+ * root-level tokens (--bs-body-bg, --bs-secondary-color, --bs-border-color,
+ * --bs-tertiary-bg, ...) ARE read live by utility classes like bg-body,
+ * text-body-secondary, bg-body-tertiary, and border — overriding them here
+ * (loaded after bootstrap.min.css) recolors every use of those utilities
+ * automatically. Component classes like .btn-primary do NOT read from
+ * those tokens — Bootstrap's compiled CSS bakes fixed hex values into each
+ * component's own --bs-btn-bg etc. at build time — so this app never uses
+ * .btn-primary at all and instead has its own .btn-brand for the single
+ * accent color, defined directly below.
+ */
+
+:root {
+  --bs-body-bg: #ffffff;
+  --bs-body-bg-rgb: 255, 255, 255;
+  --bs-body-color: #000000;
+  --bs-body-color-rgb: 0, 0, 0;
+  --bs-emphasis-color: #000000;
+  --bs-secondary-color: rgba(0, 0, 0, 0.6);
+  --bs-secondary-bg: #f0f0f2;
+  --bs-tertiary-bg: #f7f7f8;
+  --bs-tertiary-bg-rgb: 247, 247, 248;
+  --bs-border-color: #e5e5ea;
+  --bs-border-color-translucent: rgba(0, 0, 0, 0.08);
+  --bs-link-color: #007aff;
+  --bs-link-hover-color: #0060d1;
+
+  /* .btn, .form-control/.form-select, .alert, .list-group, .dropdown-menu,
+     .modal-content etc. all read their corner radius from this live at
+     render time (verified against Bootstrap's own compiled CSS) — raising
+     it here softens every one of them app-wide instead of patching each
+     component separately. Default Bootstrap is 0.375/0.25/0.5rem. */
+  --bs-border-radius: 0.85rem;
+  --bs-border-radius-sm: 0.65rem;
+  --bs-border-radius-lg: 1.1rem;
+  --bs-border-radius-xl: 1.4rem;
+
+  --accent: #007aff; /* iOS system blue — a single flat accent, no gradient */
+  --accent-rgb: 0, 122, 255;
+  --pending-bg: #fef3c7;
+  --pending-text: #92400e;
+
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-soft-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="dark"] {
+  --bs-body-bg: #000000;
+  --bs-body-bg-rgb: 0, 0, 0;
+  --bs-body-color: #ffffff;
+  --bs-body-color-rgb: 255, 255, 255;
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: rgba(255, 255, 255, 0.6);
+  --bs-secondary-bg: #1c1c1e;
+  --bs-tertiary-bg: #1c1c1e;
+  --bs-tertiary-bg-rgb: 28, 28, 30;
+  --bs-border-color: #2c2c2e;
+  --bs-border-color-translucent: rgba(255, 255, 255, 0.1);
+  --bs-link-color: #0a84ff;
+  --bs-link-hover-color: #409cff;
+
+  --accent: #0a84ff;
+  --accent-rgb: 10, 132, 255;
+  --pending-bg: rgba(234, 179, 8, 0.18);
+  --pending-text: #fbbf24;
+
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-soft-lg: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Base layout / height chain -------------------------------------- *
+ * html/body must be height-bound (not just min-height) for the room's
+ * message list to scroll internally instead of the whole page scrolling —
+ * the classic flexbox gotcha is that every link in the chain also needs
+ * min-height: 0, since flex children default to min-height: auto (their
+ * content size), which silently defeats overflow: auto on a descendant.
+ * 100dvh (dynamic viewport height) is layered after 100vh so it wins in
+ * browsers that support it, correctly accounting for mobile browser
+ * chrome (address bar) showing/hiding instead of leaving a dead gap.
+ */
+html, body { height: 100%; }
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+/* Only the chat pages (room/day) have their own internal scroll region
+   (.message-list); everywhere else — the approvals dashboard's list,
+   landing/status cards — needs the page itself to scroll normally, so
+   this must NOT be a blanket rule or long content becomes unreachable. */
+body:has(.room-shell) { overflow: hidden; }
+main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+::selection { background: var(--accent); color: #fff; }
+
+/* --- Navbar / brand --- */
+.navbar-brand i { margin-right: 0.1rem; color: var(--accent); }
+
+/* --- Avatars --- */
+.avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--bs-body-bg);
+}
+.avatar-inline {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.72rem;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  box-shadow: none;
+}
+
+/* --- Flat-accent variants of Bootstrap-shaped components --- */
+.btn-brand { background: var(--accent); color: #fff; border: none; }
+.btn-brand:hover, .btn-brand:active, .btn-brand:focus { background: var(--accent); color: #fff; filter: brightness(1.08); }
+.icon-badge {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+.icon-badge.is-warning { background: var(--pending-bg); color: var(--pending-text); }
+.icon-badge.is-decline { background-color: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+.icon-badge.is-round { border-radius: 50%; }
+
+/* --- Cards: soft elevation instead of hard borders, mobile-app style --- */
+.card { border: none; border-radius: 1.1rem; box-shadow: var(--shadow-soft); }
+.shadow-sm { box-shadow: var(--shadow-soft) !important; }
+.list-group-item { background: transparent; }
+
+/* --- Landing / status pages --- */
+.landing-card { max-width: 440px; margin: 3rem auto; box-shadow: var(--shadow-soft-lg) !important; }
+
+/* --- Room layout --- */
+.room-shell { display: flex; flex: 1; min-height: 0; }
+.members-sidebar { width: 270px; flex-shrink: 0; overflow-y: auto; }
+.members-sidebar .list-group-item { border-left: none; border-right: none; }
+.members-sidebar h6 { letter-spacing: 0.06em; }
+
+.presence-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--bs-secondary-color); flex-shrink: 0; display: inline-block; }
+.presence-dot.online { background: var(--bs-success); box-shadow: 0 0 0 3px var(--bs-success-bg-subtle); }
+
+/* Shared between server-rendered and JS-rendered member rows (poll-room.js
+   rebuilds these on every poll, so the two must stay in sync). */
+.member-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; }
+.member-row.mine .member-name { font-weight: 700; }
+.member-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn-icon { width: 2.7rem; height: 2.7rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.history-row.active { background: var(--accent) !important; color: #fff !important; border-color: transparent !important; }
+.history-row.active .text-body-secondary { color: rgba(255, 255, 255, 0.85) !important; }
+.history-preview { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.room-main { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+
+/* --- Message bubbles --- */
+.message-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.bubble {
+  max-width: 78%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 1.15rem;
+  box-shadow: var(--shadow-soft);
+  animation: bubble-in 0.18s ease-out;
+}
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.bubble.mine { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 0.3rem; }
+.bubble.theirs { align-self: flex-start; border-bottom-left-radius: 0.3rem; }
+.bubble-sender { display: flex; align-items: center; font-size: 0.75rem; font-weight: 700; opacity: 0.85; margin-bottom: 0.3rem; }
+.bubble-text { margin: 0; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+.bubble a { color: inherit; }
+.bubble-time { display: block; font-size: 0.68rem; opacity: 0.65; margin-top: 0.3rem; }
+.bubble audio { max-width: 100%; height: 2.25rem; }
+
+/* --- Composer --- */
+.composer-bar { background: var(--bs-body-bg); border-top: 1px solid var(--bs-border-color); flex-shrink: 0; }
+.composer-bar .form-control { background: var(--bs-tertiary-bg); border-color: transparent; }
+.composer-bar .form-control:focus { background: var(--bs-body-bg); border-color: var(--accent); box-shadow: 0 0 0 0.2rem rgba(var(--accent-rgb), 0.15); }
+.btn-mic.recording { background-color: var(--bs-danger) !important; color: #fff !important; border-color: var(--bs-danger) !important; animation: pulse-ring 1.4s ease-out infinite; }
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+  70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* --- Approvals dashboard --- */
+.stat-value { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; }
+.approval-card { transition: box-shadow 0.15s ease, transform 0.15s ease; }
+.approval-card:hover { box-shadow: var(--shadow-soft-lg) !important; transform: translateY(-1px); }
+.status-pill.status-approved { background-color: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.status-pill.status-rejected { background-color: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+.status-pill.status-pending { background-color: var(--pending-bg); color: var(--pending-text); }
+
+/* --- Responsive --- */
+@media (max-width: 991.98px) {
+  /* Bootstrap's offcanvas-lg default width (400px) comfortably fits
+     tablets but overwhelms narrow phones — cap it to a share of the
+     viewport instead so it never approaches full-bleed. */
+  .offcanvas-lg { width: min(320px, 85vw); }
+}
+@media (max-width: 575.98px) {
+  .stat-tiles-row .stat-value { font-size: 1.4rem; }
+  .bubble { max-width: 86%; }
+}
