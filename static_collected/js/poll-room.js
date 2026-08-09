@@ -165,6 +165,8 @@
     $folderInput.prop('disabled', disabled);
     $folderLabel.toggleClass('disabled', disabled).attr('aria-disabled', disabled ? 'true' : null);
     $micBtn.prop('disabled', disabled);
+    $sendBtn.prop('disabled', disabled);
+    $sendBtn.html(disabled ? '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>' : sendBtnIcon);
   }
 
   // The server always replies with a specific reason (blocked extension,
@@ -303,15 +305,12 @@
     sendNext(0);
   }
 
-  var sendingText = false;
-
   $composer.on('submit', function (e) {
     e.preventDefault();
     var text = $textInput.val().trim();
-    if (!text || sendingText) return;
+    if (!text || uploading) return;
 
-    sendingText = true;
-    $sendBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+    setUploadingControlsDisabled(true);
     var $pending = pendingBubble('Sending…');
 
     var formData = new FormData();
@@ -325,8 +324,7 @@
       })
       .always(function () {
         $pending.remove();
-        sendingText = false;
-        $sendBtn.prop('disabled', false).html(sendBtnIcon);
+        setUploadingControlsDisabled(false);
       });
   });
 
