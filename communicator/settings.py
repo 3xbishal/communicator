@@ -176,7 +176,7 @@ STORAGES = {
 }
 
 MEDIA_URL = "media/"  # not exposed by any URLconf; downloads go through chat.views.download
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = BASE_DIR / "../communicator_media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
