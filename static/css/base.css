@@ -268,6 +268,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
 }
 .bubble.mine { align-self: flex-end; border-left-color: var(--accent); }
 .bubble.theirs { align-self: flex-start; border-left-color: var(--accent-green); }
+.bubble.pending { display: flex; align-items: center; gap: 0.5rem; opacity: 0.75; border-style: dashed; }
+.bubble.pending .spinner-border { width: 0.9rem; height: 0.9rem; border-width: 0.15em; color: var(--accent); flex-shrink: 0; }
+.bubble.pending .pending-label { font-size: 0.85rem; }
 .bubble-sender { display: flex; align-items: center; font-size: 0.75rem; font-weight: 700; color: var(--accent-green); margin-bottom: 0.25rem; }
 .bubble.mine .bubble-sender { color: var(--accent); }
 .bubble-text { margin: 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }

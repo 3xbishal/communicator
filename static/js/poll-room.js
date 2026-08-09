@@ -75,6 +75,22 @@
     $messageList.scrollTop($messageList.prop('scrollHeight'));
   }
 
+  // A dashed, spinner-bearing stand-in bubble shown right in the chat log
+  // while an upload is in flight — a large file can take a while, and a
+  // thin progress bar tucked under the composer is easy to miss while
+  // watching the message list for something to happen. Removed once the
+  // real message lands (or the upload fails).
+  function pendingBubble(label) {
+    var $bubble = $('<div>').addClass('bubble mine pending');
+    $bubble.append(
+      $('<span>').addClass('spinner-border').attr({ role: 'status', 'aria-hidden': 'true' }),
+      $('<span>').addClass('pending-label').text(label)
+    );
+    $messageList.append($bubble);
+    $messageList.scrollTop($messageList.prop('scrollHeight'));
+    return $bubble;
+  }
+
   function renderMembers(members) {
     $membersList.empty();
     members.forEach(function (m) {
@@ -211,16 +227,26 @@
 
   function sendPayload(formData, progressLabel) {
     var showsProgress = !!progressLabel;
+    var $pending;
     if (showsProgress) {
       setUploadingControlsDisabled(true);
       showUploadProgress(progressLabel);
+      $pending = pendingBubble(progressLabel);
     }
 
-    return postAttachment(formData, showsProgress ? updateUploadProgress : null).always(function () {
+    var onProgress = showsProgress
+      ? function (percent) {
+          updateUploadProgress(percent);
+          $pending.find('.pending-label').text(progressLabel + ' — ' + percent + '%');
+        }
+      : null;
+
+    return postAttachment(formData, onProgress).always(function () {
       if (showsProgress) {
         updateUploadProgress(100);
         setTimeout(hideUploadProgress, 300);
         setUploadingControlsDisabled(false);
+        $pending.remove();
       }
     });
   }
@@ -253,16 +279,21 @@
       var file = files[i];
       var label = total > 1 ? file.name + ' (' + (i + 1) + '/' + total + ')' : file.name;
       showUploadProgress(label);
+      var $pending = pendingBubble(label);
 
       var formData = new FormData();
       formData.append('attachment', file);
       formData.append('kind', 'file');
 
-      postAttachment(formData, updateUploadProgress)
+      postAttachment(formData, function (percent) {
+        updateUploadProgress(percent);
+        $pending.find('.pending-label').text(label + ' — ' + percent + '%');
+      })
         .fail(function (xhr) {
           failures.push(file.name + ': ' + errorMessage(xhr));
         })
         .always(function () {
+          $pending.remove();
           sendNext(i + 1);
         });
     }
