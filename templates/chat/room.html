@@ -6,6 +6,9 @@
   {% include "chat/_sidebar_offcanvas.html" %}
 
   <div class="room-main">
+    <div class="drop-overlay d-none" aria-hidden="true">
+      <div class="drop-overlay-inner"><i class="fa-solid fa-cloud-arrow-up me-2"></i>Drop to send</div>
+    </div>
     <div class="d-lg-none border-bottom p-2 bg-body">
       <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
         <i class="fa-solid fa-bars me-1"></i>Members &amp; history
@@ -28,9 +31,13 @@
       </div>
       <form id="composer" class="d-flex align-items-center gap-2 p-3">
         {% csrf_token %}
-        <label class="btn btn-light btn-icon border" title="Attach file" aria-label="Attach file">
+        <label class="btn btn-light btn-icon border" title="Attach file(s)" aria-label="Attach file(s)">
           <i class="fa-solid fa-paperclip"></i>
-          <input type="file" id="file-input" name="attachment" hidden>
+          <input type="file" id="file-input" name="attachment" multiple hidden>
+        </label>
+        <label class="btn btn-light btn-icon border" title="Attach folder" aria-label="Attach folder">
+          <i class="fa-solid fa-folder-open"></i>
+          <input type="file" id="folder-input" name="attachment" webkitdirectory directory multiple hidden>
         </label>
         <input type="text" id="text-input" name="text" class="form-control" placeholder="Type a message..." autocomplete="off" aria-label="Message">
         <button type="button" id="mic-btn" class="btn btn-mic btn-light btn-icon border" title="Record a voice note" aria-label="Record a voice note"><i class="fa-solid fa-microphone"></i></button>

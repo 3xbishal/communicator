@@ -10,6 +10,8 @@
   var $textInput = $('#text-input');
   var $fileInput = $('#file-input');
   var $fileLabel = $fileInput.closest('label');
+  var $folderInput = $('#folder-input');
+  var $folderLabel = $folderInput.closest('label');
   var $micBtn = $('#mic-btn');
   var $uploadStatus = $('#upload-status');
   var $uploadFilename = $('#upload-filename');
@@ -142,7 +144,22 @@
     uploading = disabled;
     $fileInput.prop('disabled', disabled);
     $fileLabel.toggleClass('disabled', disabled).attr('aria-disabled', disabled ? 'true' : null);
+    $folderInput.prop('disabled', disabled);
+    $folderLabel.toggleClass('disabled', disabled).attr('aria-disabled', disabled ? 'true' : null);
     $micBtn.prop('disabled', disabled);
+  }
+
+  // The server always replies with a specific reason (blocked extension,
+  // size limit, rate limit...) — surface it instead of a generic alert,
+  // otherwise "why didn't this send" is invisible to the user.
+  function errorMessage(xhr) {
+    var data = xhr && xhr.responseJSON;
+    if (data && data.error) {
+      return data.error === 'rate_limited'
+        ? "You're sending too fast — wait a moment and try again."
+        : data.error;
+    }
+    return xhr && xhr.status ? 'Server error (' + xhr.status + ').' : 'Network error.';
   }
 
   function showUploadProgress(filename) {
@@ -162,13 +179,7 @@
   }
 
   // --- Composer ---
-  function sendPayload(formData, progressLabel) {
-    var showsProgress = !!progressLabel;
-    if (showsProgress) {
-      setUploadingControlsDisabled(true);
-      showUploadProgress(progressLabel);
-    }
-
+  function postAttachment(formData, onProgress) {
     return $.ajax({
       url: '/chat/send/',
       method: 'POST',
@@ -183,27 +194,80 @@
       headers: { 'X-CSRFToken': getCookie('csrftoken') },
       xhr: function () {
         var xhr = $.ajaxSettings.xhr();
-        if (showsProgress && xhr.upload) {
+        if (onProgress && xhr.upload) {
           xhr.upload.addEventListener('progress', function (e) {
             if (e.lengthComputable) {
-              updateUploadProgress(Math.round((e.loaded / e.total) * 100));
+              onProgress(Math.round((e.loaded / e.total) * 100));
             }
           });
         }
         return xhr;
       },
-    })
-      .done(function (msg) {
-        lastId = Math.max(lastId, msg.id);
-        appendMessage(msg);
-      })
-      .always(function () {
-        if (showsProgress) {
-          updateUploadProgress(100);
-          setTimeout(hideUploadProgress, 300);
-          setUploadingControlsDisabled(false);
+    }).done(function (msg) {
+      lastId = Math.max(lastId, msg.id);
+      appendMessage(msg);
+    });
+  }
+
+  function sendPayload(formData, progressLabel) {
+    var showsProgress = !!progressLabel;
+    if (showsProgress) {
+      setUploadingControlsDisabled(true);
+      showUploadProgress(progressLabel);
+    }
+
+    return postAttachment(formData, showsProgress ? updateUploadProgress : null).always(function () {
+      if (showsProgress) {
+        updateUploadProgress(100);
+        setTimeout(hideUploadProgress, 300);
+        setUploadingControlsDisabled(false);
+      }
+    });
+  }
+
+  // Sends a folder's/multi-select's files one at a time — each Message
+  // holds exactly one attachment, so "uploading a folder" means one
+  // message per file, sequenced so they don't fight over the progress bar
+  // or the rate limiter. A file rejected (too large, blocked type, ...)
+  // doesn't stop the rest of the batch; failures are reported together
+  // at the end with the server's actual reason for each.
+  function sendFilesSequentially(fileList) {
+    var files = Array.prototype.slice.call(fileList);
+    if (!files.length) return;
+    var total = files.length;
+    var failures = [];
+
+    setUploadingControlsDisabled(true);
+
+    function sendNext(i) {
+      if (i >= total) {
+        updateUploadProgress(100);
+        setTimeout(hideUploadProgress, 300);
+        setUploadingControlsDisabled(false);
+        if (failures.length) {
+          alert('Some files failed to send:\n' + failures.join('\n'));
         }
-      });
+        return;
+      }
+
+      var file = files[i];
+      var label = total > 1 ? file.name + ' (' + (i + 1) + '/' + total + ')' : file.name;
+      showUploadProgress(label);
+
+      var formData = new FormData();
+      formData.append('attachment', file);
+      formData.append('kind', 'file');
+
+      postAttachment(formData, updateUploadProgress)
+        .fail(function (xhr) {
+          failures.push(file.name + ': ' + errorMessage(xhr));
+        })
+        .always(function () {
+          sendNext(i + 1);
+        });
+    }
+
+    sendNext(0);
   }
 
   $composer.on('submit', function (e) {
@@ -213,25 +277,103 @@
     var formData = new FormData();
     formData.append('text', text);
     $textInput.val('');
-    sendPayload(formData).fail(function () {
+    sendPayload(formData).fail(function (xhr) {
       $textInput.val(text);
-      alert('Message failed to send.');
+      alert('Message failed to send: ' + errorMessage(xhr));
     });
   });
 
   $fileInput.on('change', function () {
     if (uploading || !this.files.length) return;
-    var file = this.files[0];
-    var formData = new FormData();
-    formData.append('attachment', file);
-    formData.append('kind', 'file');
-    sendPayload(formData, file.name)
-      .fail(function () {
-        alert('File failed to send.');
-      })
-      .always(function () {
-        $fileInput.val('');
-      });
+    sendFilesSequentially(this.files);
+    this.value = '';
+  });
+
+  $folderInput.on('change', function () {
+    if (uploading || !this.files.length) return;
+    sendFilesSequentially(this.files);
+    this.value = '';
+  });
+
+  // --- Drag & drop ---
+  // Recursively walks a dropped entry (file or directory) into a flat list
+  // of Files, using the same webkitGetAsEntry traversal Chrome/Firefox/Edge
+  // expose for dropped folders. Falls back to dataTransfer.files (no
+  // recursion) on browsers without it.
+  function filesFromEntry(entry) {
+    return new Promise(function (resolve) {
+      if (!entry) {
+        resolve([]);
+      } else if (entry.isFile) {
+        entry.file(function (file) { resolve([file]); }, function () { resolve([]); });
+      } else if (entry.isDirectory) {
+        var reader = entry.createReader();
+        var collected = [];
+        (function readBatch() {
+          reader.readEntries(function (entries) {
+            if (!entries.length) {
+              Promise.all(collected).then(function (groups) {
+                resolve(Array.prototype.concat.apply([], groups));
+              });
+              return;
+            }
+            entries.forEach(function (child) { collected.push(filesFromEntry(child)); });
+            readBatch();
+          }, function () { resolve([]); });
+        })();
+      } else {
+        resolve([]);
+      }
+    });
+  }
+
+  function filesFromDataTransfer(dataTransfer) {
+    var items = dataTransfer.items;
+    if (items && items.length && items[0].webkitGetAsEntry) {
+      var entries = Array.prototype.map.call(items, function (item) {
+        return item.webkitGetAsEntry && item.webkitGetAsEntry();
+      }).filter(Boolean);
+      if (entries.length) {
+        return Promise.all(entries.map(filesFromEntry)).then(function (groups) {
+          return Array.prototype.concat.apply([], groups);
+        });
+      }
+    }
+    return Promise.resolve(Array.prototype.slice.call(dataTransfer.files || []));
+  }
+
+  var $roomMain = $('.room-main');
+  var $dropOverlay = $('.drop-overlay');
+  var dragDepth = 0;
+
+  $roomMain.on('dragenter', function (e) {
+    if (uploading || !e.originalEvent.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    dragDepth++;
+    $dropOverlay.removeClass('d-none');
+  });
+
+  $roomMain.on('dragover', function (e) {
+    if (uploading || !e.originalEvent.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+  });
+
+  $roomMain.on('dragleave', function (e) {
+    if (uploading) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) $dropOverlay.addClass('d-none');
+  });
+
+  $roomMain.on('drop', function (e) {
+    dragDepth = 0;
+    $dropOverlay.addClass('d-none');
+    if (uploading) return;
+    var dt = e.originalEvent.dataTransfer;
+    if (!dt || !dt.types.includes('Files')) return;
+    e.preventDefault();
+    filesFromDataTransfer(dt).then(function (files) {
+      if (files.length) sendFilesSequentially(files);
+    });
   });
 
   var recording = false;
@@ -250,8 +392,8 @@
         var formData = new FormData();
         formData.append('attachment', blob, 'voice-note.webm');
         formData.append('kind', 'voice');
-        sendPayload(formData, 'voice note').fail(function () {
-          alert('Voice note failed to send.');
+        sendPayload(formData, 'voice note').fail(function (xhr) {
+          alert('Voice note failed to send: ' + errorMessage(xhr));
         });
       });
     } else {
